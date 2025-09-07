@@ -191,4 +191,4 @@ AutoLane provides comprehensive evaluation metrics:
 
 ![op1](op1.png)
 ![op2](op2.png)
-![op3](opvideo.gif)
+[![Lane Detection Video](https://img.shields.io/badge/🎥-Watch%20Demo%20Video-blue?style=for-the-badge)](opvideo.mp4)
