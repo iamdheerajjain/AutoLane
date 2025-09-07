@@ -1,4 +1,4 @@
-# 🚗 AutoLane - Advanced Lane Detection System with Deep Learning**
+# 🚗 AutoLane - Advanced Lane Detection System with Deep Learning
 
 AutoLane is a state-of-the-art lane detection system that uses custom-trained Convolutional Neural Networks (CNNs) to accurately identify and track lane markings in real-time. Built with TensorFlow/Keras and featuring a modern Streamlit web interface, AutoLane provides both training capabilities and real-time prediction for images and videos.
 
@@ -47,7 +47,7 @@ AutoLane is a state-of-the-art lane detection system that uses custom-trained Co
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/autolane.git
+   git clone https://github.com/iamdheerajjain/autolane.git
    cd autolane
    ```
 
@@ -55,21 +55,20 @@ AutoLane is a state-of-the-art lane detection system that uses custom-trained Co
 
    ```bash
    pip install -r requirements.txt
-   ```
 
-3. **Launch the application**
+3. **Model Training**
 
    ```bash
-   python run_streamlit.py
+   python training.py --videos "Videos/*.mp4" --epochs 50 --batch_size 8 --frames_per_video 100 --augment --use_generator
    ```
 
-4. **Access the web interface**
-   - Open your browser to `http://localhost:8501`
-   - The app will automatically set up necessary directories
+4. **Model Prediction**
 
-## 📖 Usage
+   ```bash
+   python prediction.py --input "path/of/video" --output "demo_output.mp4" --model "checkpoints/custom_lane_model_best.h5"
+   ```
 
-### 🌐 **Web Interface (Recommended)**
+## 🌐 **Web Interface (Recommended)**
 
 1. **Launch AutoLane**
 
@@ -90,31 +89,6 @@ AutoLane is a state-of-the-art lane detection system that uses custom-trained Co
    - Select a trained model
    - Download processed results with lane detection overlays
 
-### 💻 **Command Line Interface**
-
-#### **Image Processing**
-
-```bash
-python prediction.py --input image.jpg --output result.jpg --model checkpoints/custom_lane_model_best.h5
-```
-
-#### **Video Processing**
-
-```bash
-python prediction.py --input video.mp4 --output result.mp4 --model checkpoints/custom_lane_model_best.h5
-```
-
-#### **Comparison Video**
-
-```bash
-python prediction.py --input video.mp4 --output comparison.mp4 --model checkpoints/custom_lane_model_best.h5 --comparison
-```
-
-#### **Model Training**
-
-```bash
-python training.py --videos Videos/*.mp4 --epochs 100 --batch_size 32 --frames_per_video 500
-```
 
 ## 🧠 Model Architecture
 
@@ -180,14 +154,6 @@ AutoLane provides comprehensive evaluation metrics:
    - Compare multiple models
    - Export training logs for analysis
 
-### **Batch Processing**
-
-```bash
-# Process multiple videos
-for video in Videos/*.mp4; do
-    python prediction.py --input "$video" --output "outputs/$(basename "$video")" --model checkpoints/custom_lane_model_best.h5
-done
-```
 
 ## 🐛 Troubleshooting
 
@@ -220,3 +186,8 @@ done
 - **For Training**: Use GPU acceleration and memory generators
 - **For Inference**: Reduce input resolution for faster processing
 - **For Large Datasets**: Use data augmentation and batch processing
+
+## 📸 Output Preview
+
+![op1](op1.png)
+![op2](op2.png)
