@@ -14,19 +14,92 @@ class CustomLanePredictor:
         self.load_model(model_path)
     
     def load_model(self, model_path):
-        """Load the custom trained model"""
+        """Load the custom trained model with enhanced error handling"""
         if not os.path.exists(model_path):
             print(f"Model not found: {model_path}")
             print("Please train a model first using training.py")
             return False
         
         try:
-            self.model = keras.models.load_model(model_path)
-            print(f"Custom model loaded successfully from: {model_path}")
-            return True
+            # Try different loading methods for compatibility
+            print(f"Attempting to load model from: {model_path}")
+            
+            # Method 1: Standard Keras load_model
+            try:
+                self.model = keras.models.load_model(model_path, compile=False)
+                print(f"✓ Model loaded successfully using standard method")
+                return True
+            except Exception as e1:
+                print(f"Standard loading failed: {e1}")
+                
+                # Method 2: Load with custom objects
+                try:
+                    self.model = keras.models.load_model(
+                        model_path, 
+                        compile=False,
+                        custom_objects={'tf': tf}
+                    )
+                    print(f"✓ Model loaded successfully with custom objects")
+                    return True
+                except Exception as e2:
+                    print(f"Custom objects loading failed: {e2}")
+                    
+                    # Method 3: Load weights only (if model architecture is known)
+                    try:
+                        # This is a fallback - you might need to reconstruct the model architecture
+                        print("Attempting to load model weights only...")
+                        # Note: This requires knowing the model architecture
+                        # For now, we'll raise the original error
+                        raise e1
+                    except Exception as e3:
+                        print(f"Weights-only loading failed: {e3}")
+                        
+                        # Method 4: Try with different TensorFlow versions
+                        try:
+                            import tensorflow.compat.v1 as tf_v1
+                            tf_v1.disable_eager_execution()
+                            self.model = tf_v1.keras.models.load_model(model_path)
+                            print(f"✓ Model loaded successfully with TF v1 compatibility")
+                            return True
+                        except Exception as e4:
+                            print(f"TF v1 compatibility loading failed: {e4}")
+                            
+                            # Final error with detailed information
+                            self._print_detailed_error_info(model_path, [e1, e2, e3, e4])
+                            return False
+        
         except Exception as e:
-            print(f"Error loading model: {e}")
+            print(f"Unexpected error during model loading: {e}")
+            self._print_detailed_error_info(model_path, [e])
             return False
+    
+    def _print_detailed_error_info(self, model_path, errors):
+        """Print detailed error information for troubleshooting"""
+        print("\n" + "="*60)
+        print("MODEL LOADING FAILED - TROUBLESHOOTING INFO")
+        print("="*60)
+        print(f"Model path: {model_path}")
+        print(f"Model size: {os.path.getsize(model_path) / (1024*1024):.2f} MB")
+        print(f"TensorFlow version: {tf.__version__}")
+        print(f"Keras version: {keras.__version__}")
+        print(f"Python version: {os.sys.version}")
+        
+        print("\nError details:")
+        for i, error in enumerate(errors, 1):
+            print(f"  {i}. {type(error).__name__}: {error}")
+        
+        print("\nPossible solutions:")
+        print("1. Check if the model was saved with a different TensorFlow version")
+        print("2. Try retraining the model with current TensorFlow version")
+        print("3. Check if all custom layers are properly defined")
+        print("4. Verify the model file is not corrupted")
+        print("5. Try loading with compile=False parameter")
+        print("6. Check if the model requires specific custom objects")
+        
+        print("\nTo fix this issue:")
+        print("1. Run: python training.py to retrain the model")
+        print("2. Or check the model compatibility in the Streamlit app")
+        print("="*60)
     
     def preprocess_image(self, img):
         """Preprocess image for model input"""

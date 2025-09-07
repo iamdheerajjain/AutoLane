@@ -12,11 +12,9 @@ import tempfile
 import json
 from datetime import datetime
 import matplotlib.pyplot as plt
-import plotly.graph_objects as go
 import plotly.express as px
 from PIL import Image
 import pandas as pd
-import time
 import psutil
 import gc
 
@@ -49,33 +47,6 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2rem;
     }
-    .metric-card {
-        background-color: #f0f2f6;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 5px solid #1f77b4;
-    }
-    .success-message {
-        background-color: #d4edda;
-        color: #155724;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border: 1px solid #c3e6cb;
-    }
-    .error-message {
-        background-color: #f8d7da;
-        color: #721c24;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border: 1px solid #f5c6cb;
-    }
-    .info-message {
-        background-color: #d1ecf1;
-        color: #0c5460;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border: 1px solid #bee5eb;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -97,7 +68,7 @@ def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.selectbox(
         "Choose a page",
-        ["🏠 Home", "🎯 Predict", "📚 Train Model", "📊 Analytics", "⚙️ Settings"]
+        ["🏠 Home", "🎯 Predict", "📚 Train Model", "📊 Analytics", "🔧 Model Diagnostics", "⚙️ Settings"]
     )
     
     # Memory usage in sidebar
@@ -112,6 +83,8 @@ def main():
         show_train_page()
     elif page == "📊 Analytics":
         show_analytics_page()
+    elif page == "🔧 Model Diagnostics":
+        show_model_diagnostics_page()
     elif page == "⚙️ Settings":
         show_settings_page()
 
@@ -236,11 +209,30 @@ def show_predict_page():
                 if st.button("Detect Lanes", type="primary"):
                     with st.spinner("Processing image..."):
                         try:
-                            # Load predictor
-                            predictor = CustomLanePredictor(model_path)
+                            # Load predictor with detailed error handling
+                            with st.spinner("Loading model..."):
+                                predictor = CustomLanePredictor(model_path)
                             
                             if predictor.model is None:
-                                st.error("Failed to load model")
+                                st.error("❌ Failed to load model")
+                                st.error("Please check the troubleshooting section below for solutions.")
+                                
+                                # Show troubleshooting info
+                                with st.expander("🔧 Troubleshooting Information"):
+                                    st.markdown("""
+                                    **Common Model Loading Issues:**
+                                    
+                                    1. **TensorFlow Version Mismatch**: The model was saved with a different TensorFlow version
+                                    2. **Missing Dependencies**: Required packages are not installed
+                                    3. **Corrupted Model File**: The model file may be damaged
+                                    4. **Custom Objects**: Model contains custom layers not recognized
+                                    
+                                    **Solutions:**
+                                    - Try retraining the model with current TensorFlow version
+                                    - Check if all dependencies are installed: `pip install -r requirements.txt`
+                                    - Verify the model file is not corrupted
+                                    - Use the Training page to create a new model
+                                    """)
                                 return
                             
                             # Predict
@@ -287,11 +279,30 @@ def show_predict_page():
                 if st.button("Process Video", type="primary"):
                     with st.spinner("Processing video..."):
                         try:
-                            # Load predictor
-                            predictor = CustomLanePredictor(model_path)
+                            # Load predictor with detailed error handling
+                            with st.spinner("Loading model..."):
+                                predictor = CustomLanePredictor(model_path)
                             
                             if predictor.model is None:
-                                st.error("Failed to load model")
+                                st.error("❌ Failed to load model")
+                                st.error("Please check the troubleshooting section below for solutions.")
+                                
+                                # Show troubleshooting info
+                                with st.expander("🔧 Troubleshooting Information"):
+                                    st.markdown("""
+                                    **Common Model Loading Issues:**
+                                    
+                                    1. **TensorFlow Version Mismatch**: The model was saved with a different TensorFlow version
+                                    2. **Missing Dependencies**: Required packages are not installed
+                                    3. **Corrupted Model File**: The model file may be damaged
+                                    4. **Custom Objects**: Model contains custom layers not recognized
+                                    
+                                    **Solutions:**
+                                    - Try retraining the model with current TensorFlow version
+                                    - Check if all dependencies are installed: `pip install -r requirements.txt`
+                                    - Verify the model file is not corrupted
+                                    - Use the Training page to create a new model
+                                    """)
                                 return
                             
                             # Process video
@@ -552,6 +563,165 @@ def show_analytics_page():
             st.dataframe(model_df, use_container_width=True)
         else:
             st.info("Only one model found. Train more models to see comparison.")
+
+def show_model_diagnostics_page():
+    """Model diagnostics page"""
+    st.markdown("## 🔧 Model Diagnostics")
+    
+    # System information
+    st.markdown("### System Information")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("TensorFlow Version", tf.__version__)
+    
+    with col2:
+        st.metric("Keras Version", keras.__version__)
+    
+    with col3:
+        st.metric("Python Version", f"{os.sys.version.split()[0]}")
+    
+    # Model files check
+    st.markdown("### Model Files Check")
+    
+    if not os.path.exists('checkpoints'):
+        st.error("❌ No checkpoints directory found")
+        st.info("Create a checkpoints directory and train a model first")
+        return
+    
+    model_files = [f for f in os.listdir('checkpoints') if f.endswith('.h5')]
+    
+    if not model_files:
+        st.error("❌ No trained models found")
+        st.info("Train a model first using the Training page")
+        return
+    
+    st.success(f"✓ Found {len(model_files)} model file(s)")
+    
+    # Test each model
+    st.markdown("### Model Loading Tests")
+    
+    for model_file in model_files:
+        model_path = f"checkpoints/{model_file}"
+        
+        with st.expander(f"Test: {model_file}"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write(f"**File:** {model_file}")
+                st.write(f"**Size:** {os.path.getsize(model_path) / (1024*1024):.2f} MB")
+                st.write(f"**Created:** {datetime.fromtimestamp(os.path.getctime(model_path)).strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            with col2:
+                if st.button(f"Test Load {model_file}", key=f"test_{model_file}"):
+                    with st.spinner("Testing model loading..."):
+                        try:
+                            # Test model loading
+                            predictor = CustomLanePredictor(model_path)
+                            
+                            if predictor.model is not None:
+                                st.success("✅ Model loaded successfully!")
+                                
+                                # Show model info
+                                st.write("**Model Summary:**")
+                                st.text(f"Input Shape: {predictor.input_shape}")
+                                st.text(f"Model Type: {type(predictor.model).__name__}")
+                                
+                                # Test prediction with dummy data
+                                dummy_img = np.random.randint(0, 255, (160, 320, 3), dtype=np.uint8)
+                                try:
+                                    lane_mask, confidence_map = predictor.predict_lanes(dummy_img)
+                                    st.success("✅ Model prediction test passed!")
+                                    st.write(f"Output shape: {lane_mask.shape}")
+                                    st.write(f"Confidence range: {confidence_map.min():.3f} - {confidence_map.max():.3f}")
+                                except Exception as pred_error:
+                                    st.warning(f"⚠️ Model loaded but prediction failed: {pred_error}")
+                                
+                            else:
+                                st.error("❌ Model loading failed")
+                                
+                        except Exception as e:
+                            st.error(f"❌ Error testing model: {str(e)}")
+                            
+                            # Show detailed error info
+                            with st.expander("Error Details"):
+                                st.code(str(e))
+    
+    # Dependencies check
+    st.markdown("### Dependencies Check")
+    
+    dependencies = {
+        'tensorflow': tf.__version__,
+        'keras': keras.__version__,
+        'opencv-python': cv2.__version__,
+        'numpy': np.__version__,
+        'streamlit': st.__version__,
+        'matplotlib': plt.matplotlib.__version__,
+        'pandas': pd.__version__,
+        'plotly': 'Available' if 'plotly' in globals() else 'Not Available',
+        'psutil': 'Available' if 'psutil' in globals() else 'Not Available'
+    }
+    
+    for dep, version in dependencies.items():
+        if version == 'Available' or version == 'Not Available':
+            if version == 'Available':
+                st.success(f"✅ {dep}: {version}")
+            else:
+                st.error(f"❌ {dep}: {version}")
+        else:
+            st.info(f"ℹ️ {dep}: {version}")
+    
+    # GPU check
+    st.markdown("### GPU Information")
+    
+    gpus = tf.config.list_physical_devices('GPU')
+    if gpus:
+        st.success(f"✅ GPU Available: {len(gpus)} device(s)")
+        for i, gpu in enumerate(gpus):
+            st.write(f"  - GPU {i}: {gpu.name}")
+    else:
+        st.warning("⚠️ No GPU detected - using CPU")
+    
+    # Memory check
+    st.markdown("### Memory Information")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.metric("Current Memory Usage", f"{get_memory_usage():.1f} MB")
+    
+    with col2:
+        if st.button("Clear Memory"):
+            clear_memory()
+            st.success("Memory cleared!")
+            st.rerun()
+    
+    # Troubleshooting guide
+    st.markdown("### Troubleshooting Guide")
+    
+    with st.expander("Common Issues and Solutions"):
+        st.markdown("""
+        **1. Model Loading Failed**
+        - **Cause**: TensorFlow version mismatch
+        - **Solution**: Retrain the model with current TensorFlow version
+        
+        **2. CUDA/GPU Issues**
+        - **Cause**: GPU drivers or CUDA not properly installed
+        - **Solution**: Install CUDA-compatible TensorFlow or use CPU version
+        
+        **3. Memory Issues**
+        - **Cause**: Insufficient RAM for model loading
+        - **Solution**: Close other applications or use smaller batch sizes
+        
+        **4. OpenCV Issues**
+        - **Cause**: Missing system libraries
+        - **Solution**: Install opencv-python-headless instead of opencv-python
+        
+        **5. Custom Objects Error**
+        - **Cause**: Model contains custom layers not recognized
+        - **Solution**: Define custom objects or retrain without custom layers
+        """)
 
 def show_settings_page():
     """Settings page"""
