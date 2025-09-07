@@ -4,7 +4,6 @@ Professional deployment with training and prediction capabilities
 """
 
 import streamlit as st
-import cv2
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -20,6 +19,14 @@ import pandas as pd
 import time
 import psutil
 import gc
+
+# Import OpenCV with error handling
+try:
+    import cv2
+except ImportError as e:
+    st.error(f"Failed to import OpenCV: {e}")
+    st.error("Please ensure opencv-python-headless is installed correctly.")
+    st.stop()
 
 # Import our custom classes
 from training import CustomLaneTrainer
