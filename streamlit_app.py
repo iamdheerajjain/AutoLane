@@ -27,8 +27,13 @@ except ImportError as e:
     st.stop()
 
 # Import our custom classes
-from training import CustomLaneTrainer
-from prediction import CustomLanePredictor
+try:
+    from training import CustomLaneTrainer
+    from prediction import CustomLanePredictor
+except ImportError as e:
+    st.error(f"Failed to import custom classes: {e}")
+    st.error("Please ensure training.py and prediction.py are in the same directory.")
+    st.stop()
 
 # Page configuration
 st.set_page_config(
@@ -60,33 +65,52 @@ def clear_memory():
     gc.collect()
 
 def main():
-    # Header
-    st.markdown('<h1 class="main-header">🚗 AutoLane</h1>', unsafe_allow_html=True)
-    st.markdown("---")
-    
-    # Sidebar
-    st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox(
-        "Choose a page",
-        ["🏠 Home", "🎯 Predict", "📚 Train Model", "📊 Analytics", "🔧 Model Diagnostics", "⚙️ Settings"]
-    )
-    
-    # Memory usage in sidebar
-    memory_usage = get_memory_usage()
-    st.sidebar.metric("Memory Usage", f"{memory_usage:.1f} MB")
-    
-    if page == "🏠 Home":
-        show_home_page()
-    elif page == "🎯 Predict":
-        show_predict_page()
-    elif page == "📚 Train Model":
-        show_train_page()
-    elif page == "📊 Analytics":
-        show_analytics_page()
-    elif page == "🔧 Model Diagnostics":
-        show_model_diagnostics_page()
-    elif page == "⚙️ Settings":
-        show_settings_page()
+    try:
+        # Header
+        st.markdown('<h1 class="main-header">🚗 AutoLane</h1>', unsafe_allow_html=True)
+        st.markdown("---")
+        
+        # Sidebar
+        st.sidebar.title("Navigation")
+        page = st.sidebar.selectbox(
+            "Choose a page",
+            ["🏠 Home", "🎯 Predict", "📚 Train Model", "📊 Analytics", "🔧 Model Diagnostics", "⚙️ Settings"]
+        )
+        
+        # Memory usage in sidebar
+        try:
+            memory_usage = get_memory_usage()
+            st.sidebar.metric("Memory Usage", f"{memory_usage:.1f} MB")
+        except Exception as e:
+            st.sidebar.warning(f"Memory info unavailable: {e}")
+        
+        # Route to appropriate page
+        if page == "🏠 Home":
+            show_home_page()
+        elif page == "🎯 Predict":
+            show_predict_page()
+        elif page == "📚 Train Model":
+            show_train_page()
+        elif page == "📊 Analytics":
+            show_analytics_page()
+        elif page == "🔧 Model Diagnostics":
+            show_model_diagnostics_page()
+        elif page == "⚙️ Settings":
+            show_settings_page()
+            
+    except Exception as e:
+        st.error(f"Application error: {str(e)}")
+        st.error("Please check the Model Diagnostics page for troubleshooting information.")
+        
+        # Show basic system info even if main app fails
+        with st.expander("System Information"):
+            st.write(f"TensorFlow Version: {tf.__version__}")
+            st.write(f"Python Version: {os.sys.version}")
+            st.write(f"Streamlit Version: {st.__version__}")
+            try:
+                st.write(f"OpenCV Version: {cv2.__version__}")
+            except:
+                st.write("OpenCV: Not available")
 
 def show_home_page():
     """Home page with overview and quick start"""

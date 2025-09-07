@@ -32,41 +32,77 @@ class CustomLanePredictor:
             except Exception as e1:
                 print(f"Standard loading failed: {e1}")
                 
-                # Method 2: Load with custom objects
+                # Method 2: Load with custom objects and safe_mode
                 try:
                     self.model = keras.models.load_model(
                         model_path, 
                         compile=False,
-                        custom_objects={'tf': tf}
+                        custom_objects={'tf': tf},
+                        safe_mode=False
                     )
                     print(f"✓ Model loaded successfully with custom objects")
                     return True
                 except Exception as e2:
                     print(f"Custom objects loading failed: {e2}")
                     
-                    # Method 3: Load weights only (if model architecture is known)
+                    # Method 3: Try loading with custom layer handling
                     try:
-                        # This is a fallback - you might need to reconstruct the model architecture
-                        print("Attempting to load model weights only...")
-                        # Note: This requires knowing the model architecture
-                        # For now, we'll raise the original error
-                        raise e1
-                    except Exception as e3:
-                        print(f"Weights-only loading failed: {e3}")
+                        # Define custom objects for compatibility
+                        custom_objects = {
+                            'tf': tf,
+                            'Conv2DTranspose': keras.layers.Conv2DTranspose,
+                            'Conv2D': keras.layers.Conv2D,
+                            'MaxPooling2D': keras.layers.MaxPooling2D,
+                            'UpSampling2D': keras.layers.UpSampling2D,
+                            'BatchNormalization': keras.layers.BatchNormalization,
+                            'ReLU': keras.layers.ReLU,
+                            'LeakyReLU': keras.layers.LeakyReLU,
+                            'Dropout': keras.layers.Dropout,
+                            'Dense': keras.layers.Dense,
+                            'Flatten': keras.layers.Flatten,
+                            'GlobalAveragePooling2D': keras.layers.GlobalAveragePooling2D,
+                        }
                         
-                        # Method 4: Try with different TensorFlow versions
+                        self.model = keras.models.load_model(
+                            model_path, 
+                            compile=False,
+                            custom_objects=custom_objects,
+                            safe_mode=False
+                        )
+                        print(f"✓ Model loaded successfully with custom layer handling")
+                        return True
+                    except Exception as e3:
+                        print(f"Custom layer handling failed: {e3}")
+                        
+                        # Method 4: Try loading with legacy support
                         try:
-                            import tensorflow.compat.v1 as tf_v1
-                            tf_v1.disable_eager_execution()
-                            self.model = tf_v1.keras.models.load_model(model_path)
-                            print(f"✓ Model loaded successfully with TF v1 compatibility")
+                            # Set TensorFlow to use legacy behavior
+                            tf.config.experimental.enable_op_determinism()
+                            
+                            self.model = keras.models.load_model(
+                                model_path, 
+                                compile=False,
+                                custom_objects={'tf': tf},
+                                safe_mode=False
+                            )
+                            print(f"✓ Model loaded successfully with legacy support")
                             return True
                         except Exception as e4:
-                            print(f"TF v1 compatibility loading failed: {e4}")
+                            print(f"Legacy support loading failed: {e4}")
                             
-                            # Final error with detailed information
-                            self._print_detailed_error_info(model_path, [e1, e2, e3, e4])
-                            return False
+                            # Method 5: Try with different TensorFlow versions
+                            try:
+                                import tensorflow.compat.v1 as tf_v1
+                                tf_v1.disable_eager_execution()
+                                self.model = tf_v1.keras.models.load_model(model_path)
+                                print(f"✓ Model loaded successfully with TF v1 compatibility")
+                                return True
+                            except Exception as e5:
+                                print(f"TF v1 compatibility loading failed: {e5}")
+                                
+                                # Final error with detailed information
+                                self._print_detailed_error_info(model_path, [e1, e2, e3, e4, e5])
+                                return False
         
         except Exception as e:
             print(f"Unexpected error during model loading: {e}")
