@@ -1,4 +1,4 @@
-# 🚗 AutoLane - Advanced Lane Detection System with Deep Learning**
+# 🚗 AutoLane - Advanced Lane Detection System with Deep Learning
 
 AutoLane is a state-of-the-art lane detection system that uses custom-trained Convolutional Neural Networks (CNNs) to accurately identify and track lane markings in real-time. Built with TensorFlow/Keras and featuring a modern Streamlit web interface, AutoLane provides both training capabilities and real-time prediction for images and videos.
 
@@ -186,3 +186,8 @@ AutoLane provides comprehensive evaluation metrics:
 - **For Training**: Use GPU acceleration and memory generators
 - **For Inference**: Reduce input resolution for faster processing
 - **For Large Datasets**: Use data augmentation and batch processing
+
+## 📸 Output Preview
+
+![op1](op1.png)
+![op2](op2.png)
