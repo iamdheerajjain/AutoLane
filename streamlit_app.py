@@ -29,9 +29,11 @@ except ImportError as e:
 try:
     from training import CustomLaneTrainer
     from prediction import CustomLanePredictor
+    from model_loader import ModelLoader
+    from enhanced_predictor import EnhancedLanePredictor
 except ImportError as e:
     st.error(f"Failed to import custom classes: {e}")
-    st.error("Please ensure training.py and prediction.py are in the same directory.")
+    st.error("Please ensure all required Python files are in the same directory.")
     st.stop()
 
 # Page configuration
@@ -232,11 +234,11 @@ def show_predict_page():
                 if st.button("Detect Lanes", type="primary"):
                     with st.spinner("Processing image..."):
                         try:
-                            # Load predictor with detailed error handling
+                            # Load predictor with enhanced error handling
                             with st.spinner("Loading model..."):
-                                predictor = CustomLanePredictor(model_path)
+                                predictor = EnhancedLanePredictor(model_path)
                             
-                            if predictor.model is None:
+                            if not predictor.is_model_loaded():
                                 st.error("❌ Failed to load model")
                                 st.error("Please check the troubleshooting section below for solutions.")
                                 
@@ -255,7 +257,15 @@ def show_predict_page():
                                     - Check if all dependencies are installed: `pip install -r requirements.txt`
                                     - Verify the model file is not corrupted
                                     - Use the Training page to create a new model
+                                    - Use the Model Diagnostics page to test model loading
                                     """)
+                                
+                                # Show model info if available
+                                model_info = predictor.get_model_info()
+                                if 'error_details' in model_info:
+                                    with st.expander("Detailed Error Information"):
+                                        for error in model_info['error_details']:
+                                            st.error(f"• {error}")
                                 return
                             
                             # Predict
@@ -302,11 +312,11 @@ def show_predict_page():
                 if st.button("Process Video", type="primary"):
                     with st.spinner("Processing video..."):
                         try:
-                            # Load predictor with detailed error handling
+                            # Load predictor with enhanced error handling
                             with st.spinner("Loading model..."):
-                                predictor = CustomLanePredictor(model_path)
+                                predictor = EnhancedLanePredictor(model_path)
                             
-                            if predictor.model is None:
+                            if not predictor.is_model_loaded():
                                 st.error("❌ Failed to load model")
                                 st.error("Please check the troubleshooting section below for solutions.")
                                 
@@ -325,7 +335,15 @@ def show_predict_page():
                                     - Check if all dependencies are installed: `pip install -r requirements.txt`
                                     - Verify the model file is not corrupted
                                     - Use the Training page to create a new model
+                                    - Use the Model Diagnostics page to test model loading
                                     """)
+                                
+                                # Show model info if available
+                                model_info = predictor.get_model_info()
+                                if 'error_details' in model_info:
+                                    with st.expander("Detailed Error Information"):
+                                        for error in model_info['error_details']:
+                                            st.error(f"• {error}")
                                 return
                             
                             # Process video
@@ -640,16 +658,23 @@ def show_model_diagnostics_page():
                 if st.button(f"Test Load {model_file}", key=f"test_{model_file}"):
                     with st.spinner("Testing model loading..."):
                         try:
-                            # Test model loading
-                            predictor = CustomLanePredictor(model_path)
+                            # Test model loading with enhanced predictor
+                            predictor = EnhancedLanePredictor(model_path)
                             
-                            if predictor.model is not None:
+                            if predictor.is_model_loaded():
                                 st.success("✅ Model loaded successfully!")
+                                
+                                # Get detailed model info
+                                model_info = predictor.get_model_info()
                                 
                                 # Show model info
                                 st.write("**Model Summary:**")
-                                st.text(f"Input Shape: {predictor.input_shape}")
-                                st.text(f"Model Type: {type(predictor.model).__name__}")
+                                st.text(f"Input Shape: {model_info.get('input_shape', 'Unknown')}")
+                                st.text(f"Output Shape: {model_info.get('output_shape', 'Unknown')}")
+                                st.text(f"Model Type: {model_info.get('model_type', 'Unknown')}")
+                                st.text(f"Number of Layers: {model_info.get('num_layers', 'Unknown')}")
+                                st.text(f"TensorFlow Version: {model_info.get('tf_version', 'Unknown')}")
+                                st.text(f"Keras Version: {model_info.get('keras_version', 'Unknown')}")
                                 
                                 # Test prediction with dummy data
                                 dummy_img = np.random.randint(0, 255, (160, 320, 3), dtype=np.uint8)
@@ -663,6 +688,13 @@ def show_model_diagnostics_page():
                                 
                             else:
                                 st.error("❌ Model loading failed")
+                                
+                                # Show detailed error info
+                                model_info = predictor.get_model_info()
+                                if 'error_details' in model_info:
+                                    with st.expander("Error Details"):
+                                        for error in model_info['error_details']:
+                                            st.error(f"• {error}")
                                 
                         except Exception as e:
                             st.error(f"❌ Error testing model: {str(e)}")
@@ -720,14 +752,51 @@ def show_model_diagnostics_page():
             st.success("Memory cleared!")
             st.rerun()
     
+    # Model conversion utility
+    st.markdown("### Model Conversion Utility")
+    
+    if model_files:
+        st.info("If your model fails to load due to version compatibility, try converting it:")
+        
+        selected_model_for_conversion = st.selectbox("Select model to convert", model_files)
+        
+        if st.button("Convert Model", type="primary"):
+            with st.spinner("Converting model..."):
+                try:
+                    # Use the enhanced model loader for conversion
+                    model_path = f"checkpoints/{selected_model_for_conversion}"
+                    converted_path = f"checkpoints/{selected_model_for_conversion.replace('.h5', '_converted.h5')}"
+                    
+                    # Create model loader
+                    loader = ModelLoader()
+                    
+                    # Try to load the model
+                    if loader.load_model(model_path):
+                        # Save the model with current versions
+                        loader.model.save(converted_path)
+                        st.success(f"✅ Model converted successfully! Saved as: {converted_path}")
+                        
+                        # Test the converted model
+                        test_loader = ModelLoader()
+                        if test_loader.load_model(converted_path):
+                            st.success("✅ Converted model tested successfully!")
+                        else:
+                            st.warning("⚠️ Converted model loaded but may have issues")
+                    else:
+                        st.error("❌ Could not load original model for conversion")
+                        st.info("💡 **Recommendation**: Retrain the model using the Training page with current TensorFlow version")
+                
+                except Exception as e:
+                    st.error(f"Conversion error: {str(e)}")
+    
     # Troubleshooting guide
     st.markdown("### Troubleshooting Guide")
     
     with st.expander("Common Issues and Solutions"):
         st.markdown("""
         **1. Model Loading Failed**
-        - **Cause**: TensorFlow version mismatch
-        - **Solution**: Retrain the model with current TensorFlow version
+        - **Cause**: TensorFlow version mismatch (numpy 1.26.x → 2.1.x)
+        - **Solution**: Use the Model Conversion Utility above, or retrain the model
         
         **2. CUDA/GPU Issues**
         - **Cause**: GPU drivers or CUDA not properly installed
@@ -744,6 +813,10 @@ def show_model_diagnostics_page():
         **5. Custom Objects Error**
         - **Cause**: Model contains custom layers not recognized
         - **Solution**: Define custom objects or retrain without custom layers
+        
+        **6. Version Compatibility**
+        - **Cause**: Model trained with different TensorFlow/numpy versions
+        - **Solution**: Use conversion utility or retrain with current versions
         """)
 
 def show_settings_page():
