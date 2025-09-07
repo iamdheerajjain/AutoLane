@@ -1,6 +1,9 @@
 """
 Model Conversion Script for TensorFlow/Keras Version Compatibility
 Converts models trained with older versions to work with newer versions
+
+NOTE: This is a standalone utility script. It's not integrated into the Streamlit app
+but can be used manually to convert models for deployment compatibility.
 """
 
 import os

@@ -28,9 +28,7 @@ except ImportError as e:
 # Import our custom classes
 try:
     from training import CustomLaneTrainer
-    from prediction import CustomLanePredictor
     from model_loader import ModelLoader
-    from enhanced_predictor import EnhancedLanePredictor
     from deployment_model_loader import DeploymentModelLoader
     from deployment_predictor import DeploymentLanePredictor
 except ImportError as e:
@@ -349,6 +347,8 @@ def show_predict_page():
                                 return
                             
                             # Process video
+                            # Ensure outputs directory exists
+                            os.makedirs('outputs', exist_ok=True)
                             output_path = f"outputs/output_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
                             
                             progress_bar = st.progress(0)
@@ -361,8 +361,29 @@ def show_predict_page():
                             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                             
-                            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+                            # Try different video codecs for better compatibility
+                            codecs_to_try = ['mp4v', 'XVID', 'MJPG', 'X264']
+                            out = None
+                            
+                            for codec in codecs_to_try:
+                                try:
+                                    fourcc = cv2.VideoWriter_fourcc(*codec)
+                                    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+                                    
+                                    if out.isOpened():
+                                        st.info(f"Using video codec: {codec}")
+                                        break
+                                    else:
+                                        out.release()
+                                        out = None
+                                except Exception as codec_error:
+                                    st.warning(f"Codec {codec} failed: {codec_error}")
+                                    continue
+                            
+                            if out is None or not out.isOpened():
+                                st.error(f"❌ Failed to create output video writer for: {output_path}")
+                                st.error("Tried multiple codecs but none worked. This might be due to file permissions or codec issues.")
+                                return
                             
                             frame_count = 0
                             
@@ -388,22 +409,77 @@ def show_predict_page():
                             
                             # Show result
                             st.success("Video processing complete!")
-                            st.video(output_path)
                             
-                            # Download button
-                            with open(output_path, 'rb') as f:
-                                video_bytes = f.read()
-                            
-                            st.download_button(
-                                label="Download Processed Video",
-                                data=video_bytes,
-                                file_name=f"lane_detection_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4",
-                                mime="video/mp4"
-                            )
+                            # Check if output file exists and is readable
+                            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                                try:
+                                    st.video(output_path)
+                                    
+                                    # Download button
+                                    with open(output_path, 'rb') as f:
+                                        video_bytes = f.read()
+                                    
+                                    st.download_button(
+                                        label="Download Processed Video",
+                                        data=video_bytes,
+                                        file_name=f"lane_detection_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4",
+                                        mime="video/mp4"
+                                    )
+                                    
+                                except Exception as e:
+                                    st.warning(f"⚠️ Could not display video: {str(e)}")
+                                    st.info("The video was processed successfully but cannot be displayed. You can still download it.")
+                                    
+                                    # Try to provide download anyway
+                                    try:
+                                        with open(output_path, 'rb') as f:
+                                            video_bytes = f.read()
+                                        
+                                        st.download_button(
+                                            label="Download Processed Video",
+                                            data=video_bytes,
+                                            file_name=f"lane_detection_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4",
+                                            mime="video/mp4"
+                                        )
+                                    except Exception as download_error:
+                                        st.error(f"❌ Could not prepare download: {str(download_error)}")
+                            else:
+                                st.error("❌ Output video file was not created or is empty")
+                                st.error("This might be due to file system permissions or codec issues.")
+                                
+                                # Show troubleshooting information
+                                with st.expander("🔧 Video Output Troubleshooting"):
+                                    st.markdown("""
+                                    **Common Video Output Issues:**
+                                    
+                                    1. **File System Permissions**: The deployed environment may not allow writing to certain directories
+                                    2. **Codec Compatibility**: The video codec may not be supported in the deployed environment
+                                    3. **Disk Space**: Insufficient disk space to create the output file
+                                    4. **File Path Issues**: The output path may contain invalid characters
+                                    
+                                    **Solutions:**
+                                    - Try processing a shorter video
+                                    - Check if the outputs directory exists and is writable
+                                    - Try different video formats
+                                    - Contact support if the issue persists
+                                    
+                                    **Technical Details:**
+                                    - Output path: `{output_path}`
+                                    - File exists: `{os.path.exists(output_path) if 'output_path' in locals() else 'Unknown'}`
+                                    - File size: `{os.path.getsize(output_path) if 'output_path' in locals() and os.path.exists(output_path) else 'Unknown'} bytes`
+                                    """.format(
+                                        output_path=output_path if 'output_path' in locals() else 'Unknown',
+                                        os=os
+                                    ))
                             
                             # Cleanup
-                            os.unlink(temp_video_path)
-                            os.unlink(output_path)
+                            try:
+                                if os.path.exists(temp_video_path):
+                                    os.unlink(temp_video_path)
+                                if os.path.exists(output_path):
+                                    os.unlink(output_path)
+                            except Exception as cleanup_error:
+                                st.warning(f"⚠️ Could not clean up temporary files: {cleanup_error}")
                             
                         except Exception as e:
                             st.error(f"Error processing video: {str(e)}")
