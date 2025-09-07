@@ -11,7 +11,6 @@ import os
 import tempfile
 import json
 from datetime import datetime
-import matplotlib.pyplot as plt
 import plotly.express as px
 from PIL import Image
 import pandas as pd
@@ -681,7 +680,7 @@ def show_model_diagnostics_page():
         'opencv-python': cv2.__version__,
         'numpy': np.__version__,
         'streamlit': st.__version__,
-        'matplotlib': plt.matplotlib.__version__,
+        'matplotlib': 'Available' if 'matplotlib' in globals() else 'Not Available',
         'pandas': pd.__version__,
         'plotly': 'Available' if 'plotly' in globals() else 'Not Available',
         'psutil': 'Available' if 'psutil' in globals() else 'Not Available'
