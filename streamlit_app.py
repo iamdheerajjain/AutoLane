@@ -31,6 +31,8 @@ try:
     from prediction import CustomLanePredictor
     from model_loader import ModelLoader
     from enhanced_predictor import EnhancedLanePredictor
+    from deployment_model_loader import DeploymentModelLoader
+    from deployment_predictor import DeploymentLanePredictor
 except ImportError as e:
     st.error(f"Failed to import custom classes: {e}")
     st.error("Please ensure all required Python files are in the same directory.")
@@ -236,7 +238,7 @@ def show_predict_page():
                         try:
                             # Load predictor with enhanced error handling
                             with st.spinner("Loading model..."):
-                                predictor = EnhancedLanePredictor(model_path)
+                                predictor = DeploymentLanePredictor(model_path)
                             
                             if not predictor.is_model_loaded():
                                 st.error("❌ Failed to load model")
@@ -314,7 +316,7 @@ def show_predict_page():
                         try:
                             # Load predictor with enhanced error handling
                             with st.spinner("Loading model..."):
-                                predictor = EnhancedLanePredictor(model_path)
+                                predictor = DeploymentLanePredictor(model_path)
                             
                             if not predictor.is_model_loaded():
                                 st.error("❌ Failed to load model")
@@ -659,7 +661,7 @@ def show_model_diagnostics_page():
                     with st.spinner("Testing model loading..."):
                         try:
                             # Test model loading with enhanced predictor
-                            predictor = EnhancedLanePredictor(model_path)
+                            predictor = DeploymentLanePredictor(model_path)
                             
                             if predictor.is_model_loaded():
                                 st.success("✅ Model loaded successfully!")
